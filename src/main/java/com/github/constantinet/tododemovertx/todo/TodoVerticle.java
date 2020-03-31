@@ -34,6 +34,8 @@ public class TodoVerticle extends AbstractVerticle {
         router.get("/todo").handler(this::getTodos);
         router.get("/todo/:id").handler(this::getTodo);
         router.post("/todo").handler(this::createTodo);
+        router.put("/todo/:id").handler(this::updateTodo);
+        router.put("/api/v2/todo/:id").handler(this::rxUpdateTodo);
         router.delete().path("/todo/:id").handler(this::deleteTodo);
 
         vertx.createHttpServer()
@@ -46,6 +48,7 @@ public class TodoVerticle extends AbstractVerticle {
                     }
                 });
     }
+
 
     private void getTodos(final RoutingContext routingContext) {
         final HttpServerResponse response = routingContext.response()
@@ -90,6 +93,31 @@ public class TodoVerticle extends AbstractVerticle {
 
         final Todo todoToCreate = routingContext.getBodyAsJson().mapTo(Todo.class);
         todoRepository.insert(todoToCreate).subscribe(
+                todo -> response.setStatusCode(200).end(JsonObject.mapFrom(todo).encode()),
+                error -> response.setStatusCode(500).end()
+        );
+    }
+
+    private void updateTodo(final RoutingContext routingContext) {
+        final HttpServerResponse response = routingContext.response()
+                .putHeader("Content-Type", "application/json");
+
+        final Todo toDoUpdate = routingContext.getBodyAsJson().mapTo(Todo.class);
+        todoRepository.update(toDoUpdate, todoAsyncResult -> {
+            if (todoAsyncResult.succeeded()) {
+                response.setStatusCode(200).end(JsonObject.mapFrom(toDoUpdate).encode());
+            } else {
+                response.setStatusCode(500).end();
+            }
+        });
+    }
+
+    private void rxUpdateTodo(RoutingContext routingContext) {
+        final HttpServerResponse response = routingContext.response()
+                .putHeader("Content-Type", "application/json");
+
+        final Todo toDoUpdate = routingContext.getBodyAsJson().mapTo(Todo.class);
+        todoRepository.update(toDoUpdate).subscribe(
                 todo -> response.setStatusCode(200).end(JsonObject.mapFrom(todo).encode()),
                 error -> response.setStatusCode(500).end()
         );

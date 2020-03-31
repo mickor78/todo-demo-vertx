@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.ext.mongo.MongoClient;
 
@@ -40,6 +42,25 @@ public class TodoRepository {
         return mongoClient
                 .rxInsert(COLLECTION_NAME, todoJsonObject)
                 .map(id -> new Todo(id, todo.getDescription()));
+    }
+
+    public void update(final Todo todo, Handler<AsyncResult<Void>> callback
+    ) {
+        mongoClient.update(COLLECTION_NAME,
+                new JsonObject().put(Todo.ID, todo.getId()),
+                new JsonObject().put("$set", new JsonObject()
+                        .put(Todo.DESCRIPTION, todo.getDescription())),
+                callback
+        );
+    }
+
+    public Single<Todo> update(Todo toDoUpdate) {
+        return mongoClient
+                .rxUpdate(COLLECTION_NAME,
+                        new JsonObject().put(Todo.ID, toDoUpdate.getId()),
+                        new JsonObject().put("$set", new JsonObject()
+                                .put(Todo.DESCRIPTION, toDoUpdate.getDescription()))
+                ).toSingleDefault(toDoUpdate);
     }
 
     public Completable delete(final String id) {
